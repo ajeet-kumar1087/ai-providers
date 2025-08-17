@@ -346,8 +346,108 @@ type OpenAIMessage struct {
 
 // Complete implements the ProviderAdapter interface for text completions
 func (a *OpenAIAdapter) Complete(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
-	// This will be implemented in task 5.2
-	return nil, fmt.Errorf("Complete method not yet implemented")
+	// Map generic request to OpenAI format
+	openaiReq := a.mapCompletionRequest(req)
+
+	// Make HTTP request to OpenAI API
+	resp, err := a.makeRequest(ctx, "/completions", openaiReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make completion request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle error responses
+	if resp.StatusCode != http.StatusOK {
+		return nil, a.parseErrorResponse(resp)
+	}
+
+	// Parse successful response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var openaiResp OpenAICompletionResponse
+	if err := json.Unmarshal(body, &openaiResp); err != nil {
+		return nil, fmt.Errorf("failed to parse OpenAI response: %w", err)
+	}
+
+	// Normalize response to generic format
+	return a.normalizeCompletionResponse(openaiResp), nil
+}
+
+// mapCompletionRequest maps a generic CompletionRequest to OpenAI format
+func (a *OpenAIAdapter) mapCompletionRequest(req CompletionRequest) OpenAICompletionRequest {
+	openaiReq := OpenAICompletionRequest{
+		Model:  DefaultModel,
+		Prompt: req.Prompt,
+		Stream: req.Stream,
+	}
+
+	// Apply temperature with range clamping
+	if req.Temperature != nil {
+		temp := *req.Temperature
+		// Clamp to OpenAI's supported range (0.0-2.0)
+		if temp < 0.0 {
+			temp = 0.0
+		}
+		if temp > 2.0 {
+			temp = 2.0
+		}
+		openaiReq.Temperature = &temp
+	} else if a.config.Temperature != nil {
+		// Use default from config if available
+		temp := *a.config.Temperature
+		if temp >= 0.0 && temp <= 2.0 {
+			openaiReq.Temperature = &temp
+		}
+	}
+
+	// Apply max tokens with provider-specific limits
+	if req.MaxTokens != nil {
+		tokens := *req.MaxTokens
+		// Clamp to OpenAI's limit
+		if tokens > MaxTokenLimit {
+			tokens = MaxTokenLimit
+		}
+		if tokens > 0 {
+			openaiReq.MaxTokens = &tokens
+		}
+	} else if a.config.MaxTokens != nil {
+		// Use default from config if available
+		tokens := *a.config.MaxTokens
+		if tokens > 0 && tokens <= MaxTokenLimit {
+			openaiReq.MaxTokens = &tokens
+		}
+	}
+
+	// Apply stop sequences
+	if len(req.Stop) > 0 {
+		openaiReq.Stop = req.Stop
+	}
+
+	return openaiReq
+}
+
+// normalizeCompletionResponse converts OpenAI response to generic format
+func (a *OpenAIAdapter) normalizeCompletionResponse(resp OpenAICompletionResponse) *CompletionResponse {
+	// Extract text from first choice (OpenAI typically returns one choice for completions)
+	text := ""
+	finishReason := ""
+	if len(resp.Choices) > 0 {
+		text = resp.Choices[0].Text
+		finishReason = resp.Choices[0].FinishReason
+	}
+
+	return &CompletionResponse{
+		Text: text,
+		Usage: Usage{
+			PromptTokens:     resp.Usage.PromptTokens,
+			CompletionTokens: resp.Usage.CompletionTokens,
+			TotalTokens:      resp.Usage.TotalTokens,
+		},
+		FinishReason: finishReason,
+	}
 }
 
 // ChatComplete implements the ProviderAdapter interface for chat completions
