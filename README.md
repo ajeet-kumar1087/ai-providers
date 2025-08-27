@@ -2,8 +2,8 @@
 
 A Go package that provides a unified interface for interacting with multiple AI providers (OpenAI, Anthropic, Google). This package abstracts away provider-specific implementations and offers a consistent API for developers to integrate AI capabilities into their applications without being locked into a single provider.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/ai-provider-wrapper/ai-provider-wrapper.svg)](https://pkg.go.dev/github.com/ai-provider-wrapper/ai-provider-wrapper)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ai-provider-wrapper/ai-provider-wrapper)](https://goreportcard.com/report/github.com/ai-provider-wrapper/ai-provider-wrapper)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ajeet-kumar1087/ai-providers.svg)](https://pkg.go.dev/github.com/ajeet-kumar1087/ai-providers)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ajeet-kumar1087/ai-providers)](https://goreportcard.com/report/github.com/ajeet-kumar1087/ai-providers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
@@ -36,7 +36,7 @@ A Go package that provides a unified interface for interacting with multiple AI 
 ### Install the Package
 
 ```bash
-go get github.com/ai-provider-wrapper/ai-provider-wrapper
+go get github.com/ajeet-kumar1087/ai-providers
 ```
 
 ### Verify Installation
