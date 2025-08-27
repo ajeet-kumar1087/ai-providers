@@ -41,10 +41,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/adapters/anthropic"
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/adapters/openai"
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/internal/utils"
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/types"
+	"github.com/ajeet-kumar1087/ai-providers/adapters/anthropic"
+	"github.com/ajeet-kumar1087/ai-providers/adapters/openai"
+	"github.com/ajeet-kumar1087/ai-providers/internal/utils"
+	"github.com/ajeet-kumar1087/ai-providers/types"
 )
 
 // client is the main implementation of the Client interface.

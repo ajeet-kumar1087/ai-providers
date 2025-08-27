@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/types"
+	"github.com/ajeet-kumar1087/ai-providers/types"
 )
 
 // Test CompletionRequest validation and JSON marshaling

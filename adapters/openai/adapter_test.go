@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	httputil "github.com/ai-provider-wrapper/ai-provider-wrapper/internal/http"
+	httputil "github.com/ajeet-kumar1087/ai-providers/internal/http"
 )
 
 // MockHTTPClient implements the HTTPClient interface for testing

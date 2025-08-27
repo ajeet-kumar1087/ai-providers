@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	httputil "github.com/ai-provider-wrapper/ai-provider-wrapper/internal/http"
-	"github.com/ai-provider-wrapper/ai-provider-wrapper/types"
+	httputil "github.com/ajeet-kumar1087/ai-providers/internal/http"
+	"github.com/ajeet-kumar1087/ai-providers/types"
 )
 
 const (

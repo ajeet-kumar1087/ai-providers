@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	wrapper "github.com/ai-provider-wrapper/ai-provider-wrapper"
+	wrapper "github.com/ajeet-kumar1087/ai-providers"
 )
 
 func main() {
