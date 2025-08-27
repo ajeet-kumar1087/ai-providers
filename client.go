@@ -502,11 +502,8 @@ func (c *client) validateConversationStructure(messages []Message) error {
 		case "system":
 			systemMessageCount++
 			// System messages are typically at the beginning, but some providers allow them anywhere
-			// We'll be permissive here and just count them
 		case "user":
-			if lastNonSystemRole == "user" {
-				// Allow consecutive user messages (some use cases require this)
-			}
+			// Allow consecutive user messages (some use cases require this)
 			lastNonSystemRole = "user"
 		case "assistant":
 			if lastNonSystemRole == "" {

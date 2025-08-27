@@ -321,7 +321,7 @@ func LoadConfigFromEnv(provider ProviderType) Config {
 func (c Config) Validate(provider ProviderType) error {
 	// Validate required fields
 	if strings.TrimSpace(c.APIKey) == "" {
-		return fmt.Errorf("API key is required")
+		return fmt.Errorf("api key is required")
 	}
 
 	// Validate provider type
@@ -381,23 +381,23 @@ func (c Config) validateAPIKeyFormat(provider ProviderType) error {
 	case ProviderOpenAI:
 		// OpenAI API keys typically start with "sk-"
 		if !strings.HasPrefix(key, "sk-") {
-			return fmt.Errorf("OpenAI API key should start with 'sk-'")
+			return fmt.Errorf("openAI API key should start with 'sk-'")
 		}
 		if len(key) < 20 {
-			return fmt.Errorf("OpenAI API key appears to be too short")
+			return fmt.Errorf("openAI API key appears to be too short")
 		}
 	case ProviderAnthropic:
 		// Anthropic API keys typically start with "sk-ant-"
 		if !strings.HasPrefix(key, "sk-ant-") {
-			return fmt.Errorf("Anthropic API key should start with 'sk-ant-'")
+			return fmt.Errorf("anthropic API key should start with 'sk-ant-'")
 		}
 		if len(key) < 20 {
-			return fmt.Errorf("Anthropic API key appears to be too short")
+			return fmt.Errorf("anthropic API key appears to be too short")
 		}
 	case ProviderGoogle:
 		// Google API keys are typically 39 characters long
 		if len(key) < 20 {
-			return fmt.Errorf("Google API key appears to be too short")
+			return fmt.Errorf("google API key appears to be too short")
 		}
 	}
 

@@ -24,6 +24,7 @@ func main() {
 
 	fmt.Println("\n=== Provider Switching ===")
 	providerSwitching()
+
 }
 
 // configFromEnvironment demonstrates loading configuration from environment variables
@@ -173,28 +174,4 @@ func providerSwitching() {
 
 		client.Close()
 	}
-}
-
-// demonstrateConfigurationChaining shows fluent configuration building
-func demonstrateConfigurationChaining() {
-	// Build configuration using method chaining
-	config := wrapper.DefaultConfig().
-		WithAPIKey("sk-your-api-key-here").
-		WithTimeout(30 * time.Second).
-		WithMaxRetries(3).
-		WithTemperature(0.5).
-		WithMaxTokens(150)
-
-	fmt.Printf("Chained config: Timeout=%v, Temperature=%v, MaxTokens=%v\n",
-		config.Timeout, config.Temperature, config.MaxTokens)
-
-	// Use the configuration
-	client, err := wrapper.NewClient(wrapper.ProviderOpenAI, config)
-	if err != nil {
-		log.Printf("Failed to create client: %v", err)
-		return
-	}
-	defer client.Close()
-
-	fmt.Println("Client created successfully with chained configuration")
 }

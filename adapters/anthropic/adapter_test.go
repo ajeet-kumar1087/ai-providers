@@ -106,7 +106,7 @@ func TestNewAdapter(t *testing.T) {
 				APIKey: "",
 			},
 			wantErr: true,
-			errMsg:  "API key is required",
+			errMsg:  "api key is required",
 		},
 		{
 			name: "invalid API key format",
@@ -114,7 +114,7 @@ func TestNewAdapter(t *testing.T) {
 				APIKey: "sk-invalid-key",
 			},
 			wantErr: true,
-			errMsg:  "Anthropic API key should start with 'sk-ant-'",
+			errMsg:  "anthropic API key should start with 'sk-ant-'",
 		},
 		{
 			name: "short API key",
@@ -122,7 +122,7 @@ func TestNewAdapter(t *testing.T) {
 				APIKey: "sk-ant-short",
 			},
 			wantErr: true,
-			errMsg:  "Anthropic API key appears to be too short",
+			errMsg:  "anthropic API key appears to be too short",
 		},
 		{
 			name: "negative timeout",
@@ -655,7 +655,7 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			statusCode:      500,
 			responseBody:    `{"invalid": json}`,
 			expectedErrType: "",
-			expectedMsg:     "Anthropic API error (status 500)",
+			expectedMsg:     "anthropic api error (status 500)",
 		},
 	}
 

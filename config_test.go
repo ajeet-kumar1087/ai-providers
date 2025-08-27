@@ -56,7 +56,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderOpenAI,
 			wantErr:  true,
-			errMsg:   "API key is required",
+			errMsg:   "api key is required",
 		},
 		{
 			name: "whitespace API key",
@@ -65,7 +65,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderOpenAI,
 			wantErr:  true,
-			errMsg:   "API key is required",
+			errMsg:   "api key is required",
 		},
 		{
 			name: "invalid provider type",
@@ -83,7 +83,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderOpenAI,
 			wantErr:  true,
-			errMsg:   "OpenAI API key should start with 'sk-'",
+			errMsg:   "openAI API key should start with 'sk-'",
 		},
 		{
 			name: "short OpenAI API key",
@@ -92,7 +92,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderOpenAI,
 			wantErr:  true,
-			errMsg:   "OpenAI API key appears to be too short",
+			errMsg:   "openAI API key appears to be too short",
 		},
 		{
 			name: "invalid Anthropic API key format",
@@ -101,7 +101,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderAnthropic,
 			wantErr:  true,
-			errMsg:   "Anthropic API key should start with 'sk-ant-'",
+			errMsg:   "anthropic API key should start with 'sk-ant-'",
 		},
 		{
 			name: "short Anthropic API key",
@@ -110,7 +110,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderAnthropic,
 			wantErr:  true,
-			errMsg:   "Anthropic API key appears to be too short",
+			errMsg:   "anthropic API key appears to be too short",
 		},
 		{
 			name: "short Google API key",
@@ -119,7 +119,7 @@ func TestConfigValidation(t *testing.T) {
 			},
 			provider: types.ProviderGoogle,
 			wantErr:  true,
-			errMsg:   "Google API key appears to be too short",
+			errMsg:   "google API key appears to be too short",
 		},
 		{
 			name: "negative timeout",

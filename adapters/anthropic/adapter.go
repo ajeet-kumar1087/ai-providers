@@ -79,16 +79,16 @@ func NewAdapter(config AdapterConfig) (*AnthropicAdapter, error) {
 // validateConfig validates the Anthropic configuration
 func validateConfig(config AdapterConfig) error {
 	if strings.TrimSpace(config.APIKey) == "" {
-		return fmt.Errorf("API key is required")
+		return fmt.Errorf("api key is required")
 	}
 
 	// Validate API key format
 	apiKey := strings.TrimSpace(config.APIKey)
 	if !strings.HasPrefix(apiKey, "sk-ant-") {
-		return fmt.Errorf("Anthropic API key should start with 'sk-ant-'")
+		return fmt.Errorf("anthropic API key should start with 'sk-ant-'")
 	}
 	if len(apiKey) < 20 {
-		return fmt.Errorf("Anthropic API key appears to be too short")
+		return fmt.Errorf("anthropic API key appears to be too short")
 	}
 
 	// Validate timeout
@@ -165,7 +165,7 @@ func (a *AnthropicAdapter) makeRequest(ctx context.Context, endpoint string, req
 	url := a.baseURL + endpoint
 	resp, err := a.httpClient.Post(ctx, url, headers, jsonBody)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 
 	return resp, nil
@@ -188,7 +188,7 @@ func (a *AnthropicAdapter) parseErrorResponse(resp *http.Response) error {
 
 	if err := json.Unmarshal(body, &anthropicError); err != nil {
 		// If we can't parse the error, return a generic error with the status code
-		return fmt.Errorf("Anthropic API error (status %d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("anthropic api error (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	message := anthropicError.Message
