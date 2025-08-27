@@ -524,52 +524,10 @@ func (c *client) validateConversationStructure(messages []Message) error {
 			return fmt.Errorf("too many system messages (%d), Anthropic recommends fewer system messages", systemMessageCount)
 		}
 	case ProviderOpenAI:
-		// OpenAI is more flexible with message structure
+		// OpenAI is more flexible with message structure - no additional validation needed
+	case ProviderGoogle:
+		// Google provider validation will be added when implemented
 	}
 
 	return nil
-}
-
-// Provider-specific parameter limits
-
-// getMaxTemperature returns the maximum temperature for the current provider
-func (c *client) getMaxTemperature() float64 {
-	switch c.provider {
-	case ProviderOpenAI:
-		return 2.0
-	case ProviderAnthropic:
-		return 1.0
-	case ProviderGoogle:
-		return 1.0
-	default:
-		return 1.0 // Conservative default
-	}
-}
-
-// getMaxTokenLimit returns the maximum token limit for the current provider
-func (c *client) getMaxTokenLimit() int {
-	switch c.provider {
-	case ProviderOpenAI:
-		return 4096 // Conservative limit for GPT-3.5/4
-	case ProviderAnthropic:
-		return 100000 // Claude models support up to 100k tokens
-	case ProviderGoogle:
-		return 8192 // Conservative limit for Gemini
-	default:
-		return 4096 // Conservative default
-	}
-}
-
-// getMaxStopSequences returns the maximum number of stop sequences for the current provider
-func (c *client) getMaxStopSequences() int {
-	switch c.provider {
-	case ProviderOpenAI:
-		return 4 // OpenAI supports up to 4 stop sequences
-	case ProviderAnthropic:
-		return 10 // Anthropic supports more stop sequences
-	case ProviderGoogle:
-		return 5 // Conservative limit for Google
-	default:
-		return 4 // Conservative default
-	}
 }
