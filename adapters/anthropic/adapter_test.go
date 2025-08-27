@@ -1,4 +1,4 @@
-package openai
+package anthropic
 
 import (
 	"bytes"
@@ -84,7 +84,7 @@ func TestNewAdapter(t *testing.T) {
 		{
 			name: "valid config",
 			config: AdapterConfig{
-				APIKey:      "sk-1234567890abcdef1234567890abcdef",
+				APIKey:      "sk-ant-1234567890abcdef1234567890abcdef",
 				Timeout:     30 * time.Second,
 				MaxRetries:  3,
 				Temperature: floatPtr(0.7),
@@ -95,8 +95,8 @@ func TestNewAdapter(t *testing.T) {
 		{
 			name: "valid config with custom base URL",
 			config: AdapterConfig{
-				APIKey:  "sk-1234567890abcdef1234567890abcdef",
-				BaseURL: "https://custom.openai.com/v1",
+				APIKey:  "sk-ant-1234567890abcdef1234567890abcdef",
+				BaseURL: "https://custom.anthropic.com/v1",
 			},
 			wantErr: false,
 		},
@@ -111,23 +111,23 @@ func TestNewAdapter(t *testing.T) {
 		{
 			name: "invalid API key format",
 			config: AdapterConfig{
-				APIKey: "invalid-key",
+				APIKey: "sk-invalid-key",
 			},
 			wantErr: true,
-			errMsg:  "OpenAI API key should start with 'sk-'",
+			errMsg:  "Anthropic API key should start with 'sk-ant-'",
 		},
 		{
 			name: "short API key",
 			config: AdapterConfig{
-				APIKey: "sk-short",
+				APIKey: "sk-ant-short",
 			},
 			wantErr: true,
-			errMsg:  "OpenAI API key appears to be too short",
+			errMsg:  "Anthropic API key appears to be too short",
 		},
 		{
 			name: "negative timeout",
 			config: AdapterConfig{
-				APIKey:  "sk-1234567890abcdef1234567890abcdef",
+				APIKey:  "sk-ant-1234567890abcdef1234567890abcdef",
 				Timeout: -5 * time.Second,
 			},
 			wantErr: true,
@@ -136,20 +136,20 @@ func TestNewAdapter(t *testing.T) {
 		{
 			name: "invalid temperature",
 			config: AdapterConfig{
-				APIKey:      "sk-1234567890abcdef1234567890abcdef",
-				Temperature: floatPtr(2.5),
+				APIKey:      "sk-ant-1234567890abcdef1234567890abcdef",
+				Temperature: floatPtr(1.5), // Anthropic max is 1.0
 			},
 			wantErr: true,
-			errMsg:  "temperature must be between 0.0 and 2.0",
+			errMsg:  "temperature must be between 0.0 and 1.0",
 		},
 		{
 			name: "invalid max tokens",
 			config: AdapterConfig{
-				APIKey:    "sk-1234567890abcdef1234567890abcdef",
-				MaxTokens: intPtr(10000),
+				APIKey:    "sk-ant-1234567890abcdef1234567890abcdef",
+				MaxTokens: intPtr(200000), // Exceeds Anthropic limit
 			},
 			wantErr: true,
-			errMsg:  "max tokens exceeds OpenAI limit",
+			errMsg:  "max tokens exceeds Anthropic limit",
 		},
 	}
 
@@ -175,8 +175,8 @@ func TestNewAdapter(t *testing.T) {
 				}
 
 				// Verify adapter properties
-				if adapter.Name() != "openai" {
-					t.Errorf("Expected name 'openai', got %q", adapter.Name())
+				if adapter.Name() != "anthropic" {
+					t.Errorf("Expected name 'anthropic', got %q", adapter.Name())
 				}
 
 				expectedBaseURL := tt.config.BaseURL
@@ -198,7 +198,7 @@ func TestNewAdapter(t *testing.T) {
 // Test adapter methods
 func TestAdapterMethods(t *testing.T) {
 	config := AdapterConfig{
-		APIKey: "sk-1234567890abcdef1234567890abcdef",
+		APIKey: "sk-ant-1234567890abcdef1234567890abcdef",
 	}
 	adapter, err := NewAdapter(config)
 	if err != nil {
@@ -206,8 +206,8 @@ func TestAdapterMethods(t *testing.T) {
 	}
 
 	// Test Name
-	if adapter.Name() != "openai" {
-		t.Errorf("Expected name 'openai', got %q", adapter.Name())
+	if adapter.Name() != "anthropic" {
+		t.Errorf("Expected name 'anthropic', got %q", adapter.Name())
 	}
 
 	// Test SupportedFeatures
@@ -220,7 +220,6 @@ func TestAdapterMethods(t *testing.T) {
 		"max_tokens",
 		"stop_sequences",
 		"system_messages",
-		"function_calling",
 	}
 
 	if len(features) != len(expectedFeatures) {
@@ -260,21 +259,21 @@ func TestComplete_Success(t *testing.T) {
 			{
 				StatusCode: 200,
 				Body: `{
-					"id": "cmpl-test123",
-					"object": "text_completion",
-					"created": 1677652288,
-					"model": "gpt-3.5-turbo-instruct",
-					"choices": [
+					"id": "msg_test123",
+					"type": "message",
+					"role": "assistant",
+					"content": [
 						{
-							"text": "Hello! How can I help you today?",
-							"index": 0,
-							"finish_reason": "stop"
+							"type": "text",
+							"text": "Hello! How can I help you today?"
 						}
 					],
+					"model": "claude-3-haiku-20240307",
+					"stop_reason": "end_turn",
+					"stop_sequence": null,
 					"usage": {
-						"prompt_tokens": 5,
-						"completion_tokens": 9,
-						"total_tokens": 14
+						"input_tokens": 5,
+						"output_tokens": 9
 					}
 				}`,
 			},
@@ -282,7 +281,7 @@ func TestComplete_Success(t *testing.T) {
 	}
 
 	config := AdapterConfig{
-		APIKey: "sk-1234567890abcdef1234567890abcdef",
+		APIKey: "sk-ant-1234567890abcdef1234567890abcdef",
 	}
 	adapter, err := NewAdapter(config)
 	if err != nil {
@@ -321,8 +320,8 @@ func TestComplete_Success(t *testing.T) {
 		t.Errorf("Expected total tokens 14, got %d", resp.Usage.TotalTokens)
 	}
 
-	if resp.FinishReason != "stop" {
-		t.Errorf("Expected finish reason 'stop', got %q", resp.FinishReason)
+	if resp.FinishReason != "end_turn" {
+		t.Errorf("Expected finish reason 'end_turn', got %q", resp.FinishReason)
 	}
 
 	// Verify request was made correctly
@@ -335,13 +334,17 @@ func TestComplete_Success(t *testing.T) {
 		t.Errorf("Expected POST request, got %s", lastReq.Method)
 	}
 
-	if !strings.HasSuffix(lastReq.URL.Path, "/completions") {
-		t.Errorf("Expected request to /completions endpoint, got %s", lastReq.URL.Path)
+	if !strings.HasSuffix(lastReq.URL.Path, "/messages") {
+		t.Errorf("Expected request to /messages endpoint, got %s", lastReq.URL.Path)
 	}
 
 	// Verify headers
-	if auth := lastReq.Header.Get("Authorization"); auth != "Bearer "+config.APIKey {
-		t.Errorf("Expected Authorization header 'Bearer %s', got %q", config.APIKey, auth)
+	if auth := lastReq.Header.Get("x-api-key"); auth != config.APIKey {
+		t.Errorf("Expected x-api-key header %q, got %q", config.APIKey, auth)
+	}
+
+	if version := lastReq.Header.Get("anthropic-version"); version != APIVersion {
+		t.Errorf("Expected anthropic-version header %q, got %q", APIVersion, version)
 	}
 
 	if contentType := lastReq.Header.Get("Content-Type"); contentType != "application/json" {
@@ -356,19 +359,20 @@ func TestComplete_ParameterMapping(t *testing.T) {
 			{
 				StatusCode: 200,
 				Body: `{
-					"id": "cmpl-test123",
-					"object": "text_completion",
-					"created": 1677652288,
-					"model": "gpt-3.5-turbo-instruct",
-					"choices": [{"text": "Response", "index": 0, "finish_reason": "stop"}],
-					"usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}
+					"id": "msg_test123",
+					"type": "message",
+					"role": "assistant",
+					"content": [{"type": "text", "text": "Response"}],
+					"model": "claude-3-haiku-20240307",
+					"stop_reason": "end_turn",
+					"usage": {"input_tokens": 1, "output_tokens": 1}
 				}`,
 			},
 		},
 	}
 
 	config := AdapterConfig{
-		APIKey:      "sk-1234567890abcdef1234567890abcdef",
+		APIKey:      "sk-ant-1234567890abcdef1234567890abcdef",
 		Temperature: floatPtr(0.5), // Default temperature
 		MaxTokens:   intPtr(500),   // Default max tokens
 	}
@@ -383,25 +387,26 @@ func TestComplete_ParameterMapping(t *testing.T) {
 		name         string
 		request      CompletionRequest
 		expectTemp   *float64
-		expectTokens *int
+		expectTokens int
 	}{
 		{
 			name: "use request parameters",
 			request: CompletionRequest{
 				Prompt:      "Test",
-				Temperature: floatPtr(1.5),
+				Temperature: floatPtr(0.8),
 				MaxTokens:   intPtr(200),
 			},
-			expectTemp:   floatPtr(1.5),
-			expectTokens: intPtr(200),
+			expectTemp:   floatPtr(0.8),
+			expectTokens: 200,
 		},
 		{
 			name: "clamp high temperature",
 			request: CompletionRequest{
 				Prompt:      "Test",
-				Temperature: floatPtr(2.5), // Should be clamped to 2.0
+				Temperature: floatPtr(1.5), // Should be clamped to 1.0
 			},
-			expectTemp: floatPtr(2.0),
+			expectTemp:   floatPtr(1.0),
+			expectTokens: 500, // From config default
 		},
 		{
 			name: "clamp negative temperature",
@@ -409,15 +414,16 @@ func TestComplete_ParameterMapping(t *testing.T) {
 				Prompt:      "Test",
 				Temperature: floatPtr(-0.5), // Should be clamped to 0.0
 			},
-			expectTemp: floatPtr(0.0),
+			expectTemp:   floatPtr(0.0),
+			expectTokens: 500, // From config default
 		},
 		{
 			name: "clamp high max tokens",
 			request: CompletionRequest{
 				Prompt:    "Test",
-				MaxTokens: intPtr(10000), // Should be clamped to MaxTokenLimit
+				MaxTokens: intPtr(200000), // Should be clamped to MaxTokenLimit
 			},
-			expectTokens: intPtr(MaxTokenLimit),
+			expectTokens: MaxTokenLimit,
 		},
 		{
 			name: "use config defaults",
@@ -426,7 +432,7 @@ func TestComplete_ParameterMapping(t *testing.T) {
 				// No temperature or max tokens - should use config defaults
 			},
 			expectTemp:   floatPtr(0.5), // From config
-			expectTokens: intPtr(500),   // From config
+			expectTokens: 500,           // From config
 		},
 	}
 
@@ -454,30 +460,144 @@ func TestComplete_ParameterMapping(t *testing.T) {
 			// Reset body for potential future reads
 			lastReq.Body = io.NopCloser(bytes.NewReader(body))
 
-			// Parse the OpenAI request to verify parameter mapping
-			var openaiReq OpenAICompletionRequest
-			if err := json.Unmarshal(body, &openaiReq); err != nil {
+			// Parse the Anthropic request to verify parameter mapping
+			var anthropicReq AnthropicChatCompletionRequest
+			if err := json.Unmarshal(body, &anthropicReq); err != nil {
 				t.Fatalf("Failed to parse request body: %v", err)
 			}
 
 			// Verify temperature mapping
 			if tt.expectTemp != nil {
-				if openaiReq.Temperature == nil {
+				if anthropicReq.Temperature == nil {
 					t.Errorf("Expected temperature %v, got nil", *tt.expectTemp)
-				} else if *openaiReq.Temperature != *tt.expectTemp {
-					t.Errorf("Expected temperature %v, got %v", *tt.expectTemp, *openaiReq.Temperature)
+				} else if *anthropicReq.Temperature != *tt.expectTemp {
+					t.Errorf("Expected temperature %v, got %v", *tt.expectTemp, *anthropicReq.Temperature)
 				}
 			}
 
-			// Verify max tokens mapping
-			if tt.expectTokens != nil {
-				if openaiReq.MaxTokens == nil {
-					t.Errorf("Expected max tokens %v, got nil", *tt.expectTokens)
-				} else if *openaiReq.MaxTokens != *tt.expectTokens {
-					t.Errorf("Expected max tokens %v, got %v", *tt.expectTokens, *openaiReq.MaxTokens)
+			// Verify max tokens mapping (always required for Anthropic)
+			if anthropicReq.MaxTokens != tt.expectTokens {
+				t.Errorf("Expected max tokens %v, got %v", tt.expectTokens, anthropicReq.MaxTokens)
+			}
+
+			// Verify prompt is converted to user message
+			if len(anthropicReq.Messages) != 1 {
+				t.Errorf("Expected 1 message, got %d", len(anthropicReq.Messages))
+			} else {
+				if anthropicReq.Messages[0].Role != "user" {
+					t.Errorf("Expected message role 'user', got %q", anthropicReq.Messages[0].Role)
+				}
+				if anthropicReq.Messages[0].Content != tt.request.Prompt {
+					t.Errorf("Expected message content %q, got %q", tt.request.Prompt, anthropicReq.Messages[0].Content)
 				}
 			}
 		})
+	}
+}
+
+// Test chat completion request
+func TestChatComplete_Success(t *testing.T) {
+	mockClient := &MockHTTPClient{
+		responses: []MockResponse{
+			{
+				StatusCode: 200,
+				Body: `{
+					"id": "msg_test123",
+					"type": "message",
+					"role": "assistant",
+					"content": [
+						{
+							"type": "text",
+							"text": "Hello! How can I help you today?"
+						}
+					],
+					"model": "claude-3-haiku-20240307",
+					"stop_reason": "end_turn",
+					"usage": {
+						"input_tokens": 15,
+						"output_tokens": 9
+					}
+				}`,
+			},
+		},
+	}
+
+	config := AdapterConfig{
+		APIKey: "sk-ant-1234567890abcdef1234567890abcdef",
+	}
+	adapter, err := NewAdapter(config)
+	if err != nil {
+		t.Fatalf("Failed to create adapter: %v", err)
+	}
+
+	adapter.httpClient = httputil.NewClientWithHTTPClient(mockClient, 30*time.Second, 0)
+
+	req := ChatRequest{
+		Messages: []Message{
+			{Role: "system", Content: "You are a helpful assistant"},
+			{Role: "user", Content: "Hello"},
+		},
+		Temperature: floatPtr(0.7),
+		MaxTokens:   intPtr(100),
+	}
+
+	resp, err := adapter.ChatComplete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Expected successful chat completion, got error: %v", err)
+	}
+
+	// Verify response
+	if resp.Message.Role != "assistant" {
+		t.Errorf("Expected message role 'assistant', got %q", resp.Message.Role)
+	}
+
+	if resp.Message.Content != "Hello! How can I help you today?" {
+		t.Errorf("Expected message content 'Hello! How can I help you today?', got %q", resp.Message.Content)
+	}
+
+	if resp.Usage.PromptTokens != 15 {
+		t.Errorf("Expected prompt tokens 15, got %d", resp.Usage.PromptTokens)
+	}
+
+	if resp.Usage.CompletionTokens != 9 {
+		t.Errorf("Expected completion tokens 9, got %d", resp.Usage.CompletionTokens)
+	}
+
+	if resp.Usage.TotalTokens != 24 {
+		t.Errorf("Expected total tokens 24, got %d", resp.Usage.TotalTokens)
+	}
+
+	// Verify request mapping
+	lastReq := mockClient.GetLastRequest()
+	if lastReq == nil {
+		t.Fatalf("No request was made")
+	}
+
+	body, err := io.ReadAll(lastReq.Body)
+	if err != nil {
+		t.Fatalf("Failed to read request body: %v", err)
+	}
+
+	var anthropicReq AnthropicChatCompletionRequest
+	if err := json.Unmarshal(body, &anthropicReq); err != nil {
+		t.Fatalf("Failed to parse request body: %v", err)
+	}
+
+	// Verify system message is handled separately
+	if anthropicReq.System != "You are a helpful assistant" {
+		t.Errorf("Expected system message 'You are a helpful assistant', got %q", anthropicReq.System)
+	}
+
+	// Verify user message is in messages array
+	if len(anthropicReq.Messages) != 1 {
+		t.Errorf("Expected 1 message, got %d", len(anthropicReq.Messages))
+	} else {
+		if anthropicReq.Messages[0].Role != "user" {
+			t.Errorf("Expected message role 'user', got %q", anthropicReq.Messages[0].Role)
+		}
+		if anthropicReq.Messages[0].Content != "Hello" {
+			t.Errorf("Expected message content 'Hello', got %q", anthropicReq.Messages[0].Content)
+		}
 	}
 }
 
@@ -494,24 +614,18 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			name:       "authentication error",
 			statusCode: 401,
 			responseBody: `{
-				"error": {
-					"message": "Invalid API key provided",
-					"type": "invalid_request_error",
-					"code": "invalid_api_key"
-				}
+				"type": "authentication_error",
+				"message": "Invalid API key"
 			}`,
 			expectedErrType: "authentication",
-			expectedMsg:     "Invalid API key provided",
+			expectedMsg:     "Invalid API key",
 		},
 		{
 			name:       "rate limit error",
 			statusCode: 429,
 			responseBody: `{
-				"error": {
-					"message": "Rate limit exceeded",
-					"type": "rate_limit_exceeded",
-					"code": "rate_limit"
-				}
+				"type": "rate_limit_error",
+				"message": "Rate limit exceeded"
 			}`,
 			expectedErrType: "rate_limit",
 			expectedMsg:     "Rate limit exceeded",
@@ -520,11 +634,8 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			name:       "validation error",
 			statusCode: 400,
 			responseBody: `{
-				"error": {
-					"message": "Invalid request format",
-					"type": "invalid_request_error",
-					"code": "invalid_request"
-				}
+				"type": "invalid_request_error",
+				"message": "Invalid request format"
 			}`,
 			expectedErrType: "validation",
 			expectedMsg:     "Invalid request format",
@@ -533,11 +644,8 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			name:       "server error",
 			statusCode: 500,
 			responseBody: `{
-				"error": {
-					"message": "Internal server error",
-					"type": "server_error",
-					"code": "internal_error"
-				}
+				"type": "internal_server_error",
+				"message": "Internal server error"
 			}`,
 			expectedErrType: "provider",
 			expectedMsg:     "Internal server error",
@@ -547,7 +655,7 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			statusCode:      500,
 			responseBody:    `{"invalid": json}`,
 			expectedErrType: "",
-			expectedMsg:     "OpenAI API error (status 500)",
+			expectedMsg:     "Anthropic API error (status 500)",
 		},
 	}
 
@@ -566,7 +674,7 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			}
 
 			config := AdapterConfig{
-				APIKey: "sk-1234567890abcdef1234567890abcdef",
+				APIKey: "sk-ant-1234567890abcdef1234567890abcdef",
 			}
 			adapter, err := NewAdapter(config)
 			if err != nil {
@@ -585,21 +693,21 @@ func TestComplete_ErrorHandling(t *testing.T) {
 			}
 
 			// Check if it's our custom error type
-			if openaiErr, ok := err.(*Error); ok {
-				if tt.expectedErrType != "" && openaiErr.Type != tt.expectedErrType {
-					t.Errorf("Expected error type %q, got %q", tt.expectedErrType, openaiErr.Type)
+			if anthropicErr, ok := err.(*Error); ok {
+				if tt.expectedErrType != "" && anthropicErr.Type != tt.expectedErrType {
+					t.Errorf("Expected error type %q, got %q", tt.expectedErrType, anthropicErr.Type)
 				}
 
-				if !contains(openaiErr.Message, tt.expectedMsg) {
-					t.Errorf("Expected error message to contain %q, got %q", tt.expectedMsg, openaiErr.Message)
+				if !contains(anthropicErr.Message, tt.expectedMsg) {
+					t.Errorf("Expected error message to contain %q, got %q", tt.expectedMsg, anthropicErr.Message)
 				}
 
-				if openaiErr.Provider != "openai" {
-					t.Errorf("Expected provider 'openai', got %q", openaiErr.Provider)
+				if anthropicErr.Provider != "anthropic" {
+					t.Errorf("Expected provider 'anthropic', got %q", anthropicErr.Provider)
 				}
 
 				// Check retry after for rate limit errors
-				if tt.expectedErrType == "rate_limit" && openaiErr.RetryAfter == nil {
+				if tt.expectedErrType == "rate_limit" && anthropicErr.RetryAfter == nil {
 					t.Errorf("Expected RetryAfter to be set for rate limit error")
 				}
 			} else {
@@ -614,35 +722,32 @@ func TestComplete_ErrorHandling(t *testing.T) {
 
 // Test response normalization
 func TestNormalizeCompletionResponse(t *testing.T) {
-	adapter := &OpenAIAdapter{}
+	adapter := &AnthropicAdapter{}
 
 	tests := []struct {
 		name     string
-		response OpenAICompletionResponse
+		response AnthropicChatCompletionResponse
 		expected CompletionResponse
 	}{
 		{
 			name: "normal response",
-			response: OpenAICompletionResponse{
-				Choices: []struct {
-					Text         string `json:"text"`
-					Index        int    `json:"index"`
-					FinishReason string `json:"finish_reason"`
+			response: AnthropicChatCompletionResponse{
+				Content: []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
 				}{
 					{
-						Text:         "Hello world!",
-						Index:        0,
-						FinishReason: "stop",
+						Type: "text",
+						Text: "Hello world!",
 					},
 				},
+				StopReason: "end_turn",
 				Usage: struct {
-					PromptTokens     int `json:"prompt_tokens"`
-					CompletionTokens int `json:"completion_tokens"`
-					TotalTokens      int `json:"total_tokens"`
+					InputTokens  int `json:"input_tokens"`
+					OutputTokens int `json:"output_tokens"`
 				}{
-					PromptTokens:     10,
-					CompletionTokens: 20,
-					TotalTokens:      30,
+					InputTokens:  10,
+					OutputTokens: 20,
 				},
 			},
 			expected: CompletionResponse{
@@ -652,25 +757,23 @@ func TestNormalizeCompletionResponse(t *testing.T) {
 					CompletionTokens: 20,
 					TotalTokens:      30,
 				},
-				FinishReason: "stop",
+				FinishReason: "end_turn",
 			},
 		},
 		{
-			name: "empty choices",
-			response: OpenAICompletionResponse{
-				Choices: []struct {
-					Text         string `json:"text"`
-					Index        int    `json:"index"`
-					FinishReason string `json:"finish_reason"`
+			name: "empty content",
+			response: AnthropicChatCompletionResponse{
+				Content: []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
 				}{},
+				StopReason: "max_tokens",
 				Usage: struct {
-					PromptTokens     int `json:"prompt_tokens"`
-					CompletionTokens int `json:"completion_tokens"`
-					TotalTokens      int `json:"total_tokens"`
+					InputTokens  int `json:"input_tokens"`
+					OutputTokens int `json:"output_tokens"`
 				}{
-					PromptTokens:     5,
-					CompletionTokens: 0,
-					TotalTokens:      5,
+					InputTokens:  5,
+					OutputTokens: 0,
 				},
 			},
 			expected: CompletionResponse{
@@ -680,7 +783,7 @@ func TestNormalizeCompletionResponse(t *testing.T) {
 					CompletionTokens: 0,
 					TotalTokens:      5,
 				},
-				FinishReason: "",
+				FinishReason: "max_tokens",
 			},
 		},
 	}

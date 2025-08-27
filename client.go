@@ -1,3 +1,40 @@
+// Package main provides a unified interface for interacting with multiple AI providers.
+//
+// This package abstracts away provider-specific implementations and offers a consistent
+// API for developers to integrate AI capabilities into their applications without being
+// locked into a single provider.
+//
+// Supported Providers:
+//   - OpenAI (GPT models)
+//   - Anthropic (Claude models)
+//   - Google AI (Gemini models)
+//
+// Basic Usage:
+//
+//	// Create a client for OpenAI
+//	client, err := NewClient(ProviderOpenAI, Config{
+//		APIKey: "your-openai-api-key",
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer client.Close()
+//
+//	// Send a completion request
+//	resp, err := client.Complete(context.Background(), CompletionRequest{
+//		Prompt: "Hello, world!",
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(resp.Text)
+//
+// Configuration can be loaded from environment variables:
+//
+//	client, err := NewClientWithEnvConfig(ProviderOpenAI)
+//
+// The package provides consistent error handling across all providers with detailed
+// error categorization for authentication, rate limiting, network issues, and more.
 package main
 
 import (
@@ -10,14 +47,39 @@ import (
 	"github.com/ai-provider-wrapper/ai-provider-wrapper/types"
 )
 
-// client is the main implementation of the Client interface
+// client is the main implementation of the Client interface.
+// It delegates requests to provider-specific adapters while providing
+// unified parameter validation and error handling.
 type client struct {
-	adapter  ProviderAdapter
-	provider ProviderType
-	config   Config
+	adapter  ProviderAdapter // The provider-specific adapter
+	provider ProviderType    // The provider type for this client
+	config   Config          // The configuration used to create this client
 }
 
-// NewClient creates a new client instance for the specified provider
+// NewClient creates a new client instance for the specified provider.
+//
+// The function validates the provider type and configuration before creating
+// the appropriate adapter. It returns an error if the provider is unsupported
+// or if the configuration is invalid.
+//
+// Example:
+//
+//	client, err := NewClient(ProviderOpenAI, Config{
+//		APIKey: "sk-your-openai-key",
+//		Timeout: 30 * time.Second,
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer client.Close()
+//
+// Parameters:
+//   - provider: The AI provider to use (ProviderOpenAI, ProviderAnthropic, or ProviderGoogle)
+//   - config: Configuration including API key, timeout, and optional parameters
+//
+// Returns:
+//   - Client: A configured client instance ready for use
+//   - error: An error if provider is unsupported or configuration is invalid
 func NewClient(provider ProviderType, config Config) (Client, error) {
 	// Validate provider type
 	if !IsValidProvider(provider) {
@@ -61,7 +123,32 @@ func NewClient(provider ProviderType, config Config) (Client, error) {
 	}, nil
 }
 
-// Complete implements the Client interface
+// Complete sends a text completion request to the configured AI provider.
+//
+// The method validates and normalizes the request parameters before delegating
+// to the provider-specific adapter. Parameters are automatically clamped to
+// provider-specific limits and default values from the client configuration
+// are applied when not specified in the request.
+//
+// Example:
+//
+//	resp, err := client.Complete(ctx, CompletionRequest{
+//		Prompt: "Write a haiku about programming",
+//		Temperature: &[]float64{0.7}[0],
+//		MaxTokens: &[]int{100}[0],
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(resp.Text)
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeout
+//   - req: The completion request with prompt and optional parameters
+//
+// Returns:
+//   - *CompletionResponse: The completion response with generated text and usage info
+//   - error: An error if the request fails or parameters are invalid
 func (c *client) Complete(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
 	// Validate and normalize the request before delegation
 	normalizedReq, err := c.validateAndNormalizeCompletionRequest(req)
@@ -78,7 +165,32 @@ func (c *client) Complete(ctx context.Context, req CompletionRequest) (*Completi
 	return c.adapter.Complete(ctx, normalizedReq)
 }
 
-// ChatComplete implements the Client interface
+// ChatComplete sends a chat completion request to the configured AI provider.
+//
+// The method handles conversation history with proper role mapping and validates
+// the conversation structure. Message roles are automatically mapped to
+// provider-specific formats, and parameters are normalized across providers.
+//
+// Example:
+//
+//	resp, err := client.ChatComplete(ctx, ChatRequest{
+//		Messages: []Message{
+//			{Role: "user", Content: "Hello, how are you?"},
+//		},
+//		Temperature: &[]float64{0.7}[0],
+//	})
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(resp.Message.Content)
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeout
+//   - req: The chat request with messages and optional parameters
+//
+// Returns:
+//   - *ChatResponse: The chat response with the assistant's message and usage info
+//   - error: An error if the request fails or conversation structure is invalid
 func (c *client) ChatComplete(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
 	// Validate and normalize the request before delegation
 	normalizedReq, err := c.validateAndNormalizeChatRequest(req)
@@ -95,21 +207,51 @@ func (c *client) ChatComplete(ctx context.Context, req ChatRequest) (*ChatRespon
 	return c.adapter.ChatComplete(ctx, normalizedReq)
 }
 
-// Close implements the Client interface
+// Close cleans up resources and closes the client.
+//
+// Currently, this method performs no cleanup as the client uses stateless
+// HTTP connections. However, it's provided for future compatibility and
+// should always be called when the client is no longer needed.
+//
+// Example:
+//
+//	client, err := NewClient(ProviderOpenAI, config)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer client.Close() // Always close the client
+//
+// Returns:
+//   - error: Always returns nil in the current implementation
 func (c *client) Close() error {
 	// Currently no cleanup needed, but this allows for future resource management
 	return nil
 }
 
-// defaultClientFactory is the default implementation of ClientFactory
+// defaultClientFactory is the default implementation of ClientFactory.
+// It provides a factory interface for creating clients with different providers.
 type defaultClientFactory struct{}
 
-// CreateClient implements the ClientFactory interface
+// CreateClient creates a new client for the specified provider and configuration.
+//
+// This method is equivalent to calling NewClient directly but provides a
+// factory interface for dependency injection scenarios.
+//
+// Parameters:
+//   - provider: The AI provider to use
+//   - config: Configuration for the client
+//
+// Returns:
+//   - Client: A configured client instance
+//   - error: An error if client creation fails
 func (f *defaultClientFactory) CreateClient(provider ProviderType, config Config) (Client, error) {
 	return NewClient(provider, config)
 }
 
-// SupportedProviders implements the ClientFactory interface
+// SupportedProviders returns a list of all supported provider types.
+//
+// Returns:
+//   - []ProviderType: A slice containing all supported provider types
 func (f *defaultClientFactory) SupportedProviders() []ProviderType {
 	return []ProviderType{
 		ProviderOpenAI,
@@ -118,14 +260,44 @@ func (f *defaultClientFactory) SupportedProviders() []ProviderType {
 	}
 }
 
-// NewClientFactory creates a new client factory
+// NewClientFactory creates a new client factory instance.
+//
+// The factory provides an alternative interface for creating clients,
+// useful in dependency injection scenarios or when you need to query
+// supported providers programmatically.
+//
+// Example:
+//
+//	factory := NewClientFactory()
+//	providers := factory.SupportedProviders()
+//	client, err := factory.CreateClient(providers[0], config)
+//
+// Returns:
+//   - ClientFactory: A new client factory instance
 func NewClientFactory() ClientFactory {
 	return &defaultClientFactory{}
 }
 
 // Helper functions
 
-// IsValidProvider checks if the provider type is supported
+// IsValidProvider checks if the provider type is supported.
+//
+// This function can be used to validate provider types before attempting
+// to create a client, providing a quick way to check support without
+// triggering the full client creation process.
+//
+// Example:
+//
+//	if IsValidProvider(ProviderOpenAI) {
+//		client, err := NewClient(ProviderOpenAI, config)
+//		// ...
+//	}
+//
+// Parameters:
+//   - provider: The provider type to validate
+//
+// Returns:
+//   - bool: true if the provider is supported, false otherwise
 func IsValidProvider(provider ProviderType) bool {
 	switch provider {
 	case ProviderOpenAI, ProviderAnthropic, ProviderGoogle:
@@ -135,7 +307,20 @@ func IsValidProvider(provider ProviderType) bool {
 	}
 }
 
-// GetSupportedProviders returns a list of all supported provider types
+// GetSupportedProviders returns a list of all supported provider types.
+//
+// This function provides a convenient way to enumerate all available
+// providers, useful for building configuration UIs or validation logic.
+//
+// Example:
+//
+//	providers := GetSupportedProviders()
+//	for _, provider := range providers {
+//		fmt.Printf("Supported provider: %s\n", provider)
+//	}
+//
+// Returns:
+//   - []ProviderType: A slice containing all supported provider types
 func GetSupportedProviders() []ProviderType {
 	return []ProviderType{
 		ProviderOpenAI,
@@ -147,7 +332,19 @@ func GetSupportedProviders() []ProviderType {
 // ValidateProviderType validates that the provider type is supported
 var ValidateProviderType = types.ValidateProviderType
 
-// CreateAdapter creates the appropriate adapter for the provider
+// CreateAdapter creates the appropriate adapter for the specified provider.
+//
+// This function is used internally by NewClient to instantiate the correct
+// provider-specific adapter. It validates the provider type and delegates
+// to the appropriate adapter constructor.
+//
+// Parameters:
+//   - provider: The provider type to create an adapter for
+//   - config: Configuration to pass to the adapter
+//
+// Returns:
+//   - ProviderAdapter: The created adapter instance
+//   - error: An error if the provider is unsupported or adapter creation fails
 func CreateAdapter(provider ProviderType, config Config) (ProviderAdapter, error) {
 	// Validate provider type first
 	if err := ValidateProviderType(provider); err != nil {

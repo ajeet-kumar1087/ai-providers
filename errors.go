@@ -5,30 +5,85 @@ import (
 	"fmt"
 )
 
-// ErrorType represents the category of error
+// ErrorType represents the category of error that occurred.
+//
+// This enumeration provides a standardized way to categorize errors
+// across different AI providers, enabling consistent error handling
+// and retry logic regardless of the underlying provider.
 type ErrorType string
 
 const (
-	ErrorTypeAuth       ErrorType = "authentication"
-	ErrorTypeRateLimit  ErrorType = "rate_limit"
-	ErrorTypeNetwork    ErrorType = "network"
+	// ErrorTypeAuth indicates authentication or authorization failures.
+	// This includes invalid API keys, expired tokens, or insufficient permissions.
+	ErrorTypeAuth ErrorType = "authentication"
+
+	// ErrorTypeRateLimit indicates that the request was rejected due to rate limiting.
+	// The RetryAfter field may contain suggested retry timing in seconds.
+	ErrorTypeRateLimit ErrorType = "rate_limit"
+
+	// ErrorTypeNetwork indicates network-related failures.
+	// This includes connection timeouts, DNS resolution failures, or network unreachability.
+	ErrorTypeNetwork ErrorType = "network"
+
+	// ErrorTypeValidation indicates client-side validation failures.
+	// This includes invalid parameters, malformed requests, or constraint violations.
 	ErrorTypeValidation ErrorType = "validation"
-	ErrorTypeProvider   ErrorType = "provider"
+
+	// ErrorTypeProvider indicates provider-side errors.
+	// This includes internal server errors, service unavailability, or provider-specific issues.
+	ErrorTypeProvider ErrorType = "provider"
+
+	// ErrorTypeTokenLimit indicates that the request exceeded token limits.
+	// The TokenCount field may contain the actual token count that caused the error.
 	ErrorTypeTokenLimit ErrorType = "token_limit"
 )
 
-// Error represents a standardized error across all providers
+// Error represents a standardized error across all AI providers.
+//
+// This struct provides a consistent error interface that wraps provider-specific
+// errors with additional context and categorization. It implements the standard
+// Go error interface and provides additional methods for error inspection and
+// retry logic.
+//
+// The error includes provider-specific codes and messages while maintaining
+// a consistent structure for error handling across different providers.
 type Error struct {
-	Type       ErrorType `json:"type"`
-	Message    string    `json:"message"`
-	Code       string    `json:"code,omitempty"`
-	Provider   string    `json:"provider"`
-	Wrapped    error     `json:"-"`
-	RetryAfter *int      `json:"retry_after,omitempty"` // Seconds for rate limit errors
-	TokenCount *int      `json:"token_count,omitempty"` // For token limit errors
+	// Type categorizes the error for consistent handling across providers
+	Type ErrorType `json:"type"`
+
+	// Message provides a human-readable description of the error
+	Message string `json:"message"`
+
+	// Code contains the provider-specific error code (optional)
+	Code string `json:"code,omitempty"`
+
+	// Provider identifies which AI provider generated this error
+	Provider string `json:"provider"`
+
+	// Wrapped contains the original error from the provider (not serialized)
+	Wrapped error `json:"-"`
+
+	// RetryAfter suggests retry timing in seconds for rate limit errors (optional)
+	RetryAfter *int `json:"retry_after,omitempty"`
+
+	// TokenCount contains the token count for token limit errors (optional)
+	TokenCount *int `json:"token_count,omitempty"`
 }
 
-// Error implements the error interface
+// Error implements the standard Go error interface.
+//
+// Returns a formatted string representation of the error that includes
+// the provider name, error type, optional code, and message. This provides
+// a consistent format for error display and logging.
+//
+// Format: "[provider] type (code): message" or "[provider] type: message"
+//
+// Example output:
+//   - "[openai] authentication (invalid_api_key): Invalid API key provided"
+//   - "[anthropic] rate_limit: Request rate limit exceeded"
+//
+// Returns:
+//   - string: Formatted error message
 func (e *Error) Error() string {
 	if e.Code != "" {
 		return fmt.Sprintf("[%s] %s (%s): %s", e.Provider, e.Type, e.Code, e.Message)
@@ -36,12 +91,36 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("[%s] %s: %s", e.Provider, e.Type, e.Message)
 }
 
-// Unwrap returns the wrapped error
+// Unwrap returns the original wrapped error.
+//
+// This method enables Go's error unwrapping functionality, allowing
+// the use of errors.Is() and errors.As() to inspect the underlying
+// provider-specific error while maintaining the standardized wrapper.
+//
+// Returns:
+//   - error: The original error from the provider, or nil if none was wrapped
 func (e *Error) Unwrap() error {
 	return e.Wrapped
 }
 
-// Is checks if the error matches the target error
+// Is checks if this error matches the target error.
+//
+// This method enables the use of errors.Is() for error comparison.
+// Two Error instances are considered equal if they have the same
+// Type and Provider, regardless of message or code differences.
+//
+// Example:
+//
+//	authErr := NewError(ErrorTypeAuth, "openai", "Invalid key")
+//	if errors.Is(err, authErr) {
+//		// Handle authentication error
+//	}
+//
+// Parameters:
+//   - target: The error to compare against
+//
+// Returns:
+//   - bool: true if the errors match by type and provider
 func (e *Error) Is(target error) bool {
 	if t, ok := target.(*Error); ok {
 		return e.Type == t.Type && e.Provider == t.Provider
@@ -49,7 +128,22 @@ func (e *Error) Is(target error) bool {
 	return false
 }
 
-// NewError creates a new standardized error
+// NewError creates a new standardized error with the specified type, provider, and message.
+//
+// This is the basic constructor for creating standardized errors without
+// wrapping an existing error or including provider-specific codes.
+//
+// Example:
+//
+//	err := NewError(ErrorTypeValidation, "openai", "Temperature must be between 0 and 2")
+//
+// Parameters:
+//   - errorType: The category of error (authentication, rate_limit, etc.)
+//   - provider: The name of the AI provider that generated the error
+//   - message: A human-readable description of the error
+//
+// Returns:
+//   - *Error: A new standardized error instance
 func NewError(errorType ErrorType, provider, message string) *Error {
 	return &Error{
 		Type:     errorType,
@@ -109,7 +203,24 @@ func NewTokenLimitError(provider, message string, tokenCount int) *Error {
 	}
 }
 
-// IsRetryable returns true if the error type is retryable
+// IsRetryable returns true if the error type indicates a retryable condition.
+//
+// This method helps determine whether a failed request should be retried
+// based on the error type. Rate limit and network errors are typically
+// retryable, while authentication and validation errors are not.
+//
+// Retryable error types:
+//   - ErrorTypeRateLimit: Should retry after the suggested delay
+//   - ErrorTypeNetwork: Should retry with exponential backoff
+//
+// Non-retryable error types:
+//   - ErrorTypeAuth: Requires fixing credentials
+//   - ErrorTypeValidation: Requires fixing request parameters
+//   - ErrorTypeProvider: May indicate service outage (context-dependent)
+//   - ErrorTypeTokenLimit: Requires reducing request size
+//
+// Returns:
+//   - bool: true if the error condition is typically retryable
 func (e *Error) IsRetryable() bool {
 	switch e.Type {
 	case ErrorTypeRateLimit, ErrorTypeNetwork:
