@@ -4,7 +4,7 @@
 // To use this example with the actual library:
 // 1. Replace the API keys with your actual keys
 // 2. Import the library: go get github.com/ai-provider-wrapper/ai-provider-wrapper
-// 3. Import as: import wrapper "github.com/ai-provider-wrapper/ai-provider-wrapper"
+// 3. Import as: import "github.com/ai-provider-wrapper/ai-provider-wrapper"
 // 4. Replace mock types with wrapper.* types
 //
 // Note: This example uses mock implementations for demonstration purposes

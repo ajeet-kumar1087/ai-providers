@@ -52,3 +52,7 @@ coverage.html
 # Build artifacts
 dist/
 build/
+
+# Project binaries
+ai-provider-wrapper
+basic

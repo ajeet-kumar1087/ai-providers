@@ -1,4 +1,4 @@
-// Package main provides a unified interface for interacting with multiple AI providers.
+// Package aiprovider provides a unified interface for interacting with multiple AI providers.
 //
 // This package abstracts away provider-specific implementations and offers a consistent
 // API for developers to integrate AI capabilities into their applications without being
@@ -35,7 +35,7 @@
 //
 // The package provides consistent error handling across all providers with detailed
 // error categorization for authentication, rate limiting, network issues, and more.
-package main
+package aiprovider
 
 import (
 	"context"

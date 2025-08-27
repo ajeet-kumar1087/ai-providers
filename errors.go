@@ -1,4 +1,4 @@
-package main
+package aiprovider
 
 import (
 	"encoding/json"

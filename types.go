@@ -1,4 +1,4 @@
-package main
+package aiprovider
 
 import (
 	"github.com/ai-provider-wrapper/ai-provider-wrapper/types"

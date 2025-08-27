@@ -1,4 +1,4 @@
-package main
+package aiprovider
 
 // Shared test utilities to avoid duplication across test files
 
